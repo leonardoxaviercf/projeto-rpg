@@ -1,11 +1,25 @@
 #include "Entidade.hpp"
+#include <algorithm>
 
-Entidade::Entidade(string n, int hpMax) : nome(n), hpMaximo(hpMax), hpAtual(hpMax) {}
+Entidade::Entidade(const std::string& nome, int hpMaximo)
+    : nome(nome), hpMaximo(hpMaximo), hpAtual(hpMaximo) {}
 
 bool Entidade::isVivo() const {
     return hpAtual > 0;
 }
 
-string Entidade::getNome() const {
+const std::string& Entidade::getNome() const {
     return nome;
+}
+
+int Entidade::getHpMaximo() const {
+    return hpMaximo;
+}
+
+int Entidade::getHpAtual() const {
+    return hpAtual;
+}
+
+void Entidade::setHpAtual(int hp) {
+    hpAtual = std::max(0, std::min(hp, hpMaximo));
 }
