@@ -1,5 +1,6 @@
 #include "Mago.hpp"
 #include "AcaoInvalidaException.hpp"
+#include <algorithm>
 #include <iostream>
 #include <cstdlib>
 
@@ -13,6 +14,10 @@ Mago::Mago(const std::string& nome, int hpMaximo, int chanceCriticoBase, int man
       manaMaxima(manaMaxima) {}
 
 void Mago::atacar(Entidade* alvo) {
+    if (!alvo || !alvo->isVivo()) {
+        throw AcaoInvalidaException("Acao invalida: alvo inexistente ou ja derrotado.");
+    }
+
     int danoBase;
 
     if (manaAtual >= CUSTO_MANA_ATAQUE) {
@@ -40,6 +45,18 @@ void Mago::consumirMana() {
     manaAtual -= CUSTO_MANA_ATAQUE;
 }
 
+void Mago::restaurarMana(int quantidade) {
+    if (quantidade < 0) {
+        quantidade = 0;
+    }
+
+    manaAtual = std::min(manaAtual + quantidade, manaMaxima);
+}
+
 int Mago::getManaAtual() const {
     return manaAtual;
+}
+
+int Mago::getManaMaxima() const {
+    return manaMaxima;
 }

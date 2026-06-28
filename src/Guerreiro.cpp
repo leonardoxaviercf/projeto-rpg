@@ -1,4 +1,5 @@
 #include "Guerreiro.hpp"
+#include "AcaoInvalidaException.hpp"
 #include <iostream>
 #include <cstdlib>
 #include <algorithm>
@@ -7,6 +8,10 @@ Guerreiro::Guerreiro(const std::string& nome, int hpMaximo, int chanceCriticoBas
     : Personagem(nome, hpMaximo, chanceCriticoBase), escudoAtual(escudoInicial) {}
 
 void Guerreiro::atacar(Entidade* alvo) {
+    if (!alvo || !alvo->isVivo()) {
+        throw AcaoInvalidaException("Acao invalida: alvo inexistente ou ja derrotado.");
+    }
+
     int danoBase = 12;
     bool critico = (std::rand() % 100) < calcularCriticoTotal();
     int danoFinal = critico ? danoBase * 2 : danoBase;

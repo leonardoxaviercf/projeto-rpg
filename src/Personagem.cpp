@@ -1,5 +1,6 @@
 #include "Personagem.hpp"
 #include "AcaoInvalidaException.hpp"
+#include <algorithm>
 #include <iostream>
 #include <cstdlib>
 
@@ -52,7 +53,7 @@ void Personagem::atualizarEstadoVida() {
 
 int Personagem::calcularCriticoTotal() const {
     // Critico base + bônus crescente conforme o andar avança (incentiva progressão)
-    return chanceCriticoBase + (andarAtual - 1) * 2;
+    return std::max(0, std::min(chanceCriticoBase + (andarAtual - 1) * 3, 75));
 }
 
 void Personagem::adicionarItem(std::unique_ptr<Item> item) {

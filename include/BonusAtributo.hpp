@@ -4,15 +4,15 @@
 #include "Item.hpp"
 
 /**
- * Item consumível que aumenta permanentemente o HP máximo do Personagem
- * que o utiliza (representa um "bônus de dano/atributo" via aumentoDano).
+ * Item consumivel que aumenta permanentemente a chance de critico do
+ * Personagem que o utiliza.
  */
 class BonusAtributo : public Item {
 private:
-    int aumentoDano;
+    int aumentoCritico;
 
 public:
-    BonusAtributo(const std::string& nome, const std::string& descricao, int aumentoDano);
+    BonusAtributo(const std::string& nome, const std::string& descricao, int aumentoCritico);
 
     void aplicarEfeito(Personagem* p) override;
 

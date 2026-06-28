@@ -17,8 +17,10 @@ public:
 
     void atacar(Entidade* alvo) override;
     void consumirMana();
+    void restaurarMana(int quantidade);
 
     int getManaAtual() const;
+    int getManaMaxima() const;
 };
 
 #endif // MAGO_HPP

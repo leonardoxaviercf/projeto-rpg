@@ -10,6 +10,18 @@
 #include <cstdlib>
 #include <ctime>
 
+namespace {
+    bool lerInteiro(int& valor) {
+        if (std::cin >> valor) {
+            return true;
+        }
+
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        return false;
+    }
+}
+
 Partida::Partida(const std::string& caminhoArquivoEstatisticas)
     : estadoAtual(EstadoPartida::LOBBY),
       jogador(nullptr),
@@ -63,17 +75,23 @@ void Partida::processarLobby() {
     std::cout << "Opcao: ";
 
     int escolha = 0;
-    std::cin >> escolha;
+    while (true) {
+        if (lerInteiro(escolha) && (escolha == 1 || escolha == 2)) {
+            break;
+        }
+
+        std::cout << "Opcao invalida. Escolha 1 para Guerreiro ou 2 para Mago: ";
+    }
 
     std::cout << "Digite o nome do seu personagem: ";
     std::string nomePersonagem;
     std::cin >> nomePersonagem;
 
     if (escolha == 2) {
-        jogador = std::make_unique<Mago>(nomePersonagem, 80, 10, 50);
+        jogador = std::make_unique<Mago>(nomePersonagem, 80, 25, 50);
         std::cout << "Voce escolheu Mago. Boa sorte, " << nomePersonagem << "!\n";
     } else {
-        jogador = std::make_unique<Guerreiro>(nomePersonagem, 100, 10, 15);
+        jogador = std::make_unique<Guerreiro>(nomePersonagem, 100, 25, 15);
         std::cout << "Voce escolheu Guerreiro. Boa sorte, " << nomePersonagem << "!\n";
     }
 
@@ -99,7 +117,13 @@ void Partida::exibirStatus() const {
     std::cout << jogador->getNome() << " | HP: " << jogador->getHpAtual()
                << "/" << jogador->getHpMaximo()
                << " | Estado: " << estadoVidaParaString(jogador->getEstadoAtual())
+               << " | Critico: " << jogador->calcularCriticoTotal() << "%"
                << " | Andar: " << jogador->getAndarAtual() << "\n";
+    const Mago* mago = dynamic_cast<const Mago*>(jogador.get());
+    if (mago) {
+        std::cout << "Mana: " << mago->getManaAtual()
+                  << "/" << mago->getManaMaxima() << "\n";
+    }
     if (inimigoAtual && inimigoAtual->isVivo()) {
         std::cout << inimigoAtual->getNome() << " | HP: " << inimigoAtual->getHpAtual()
                    << "/" << inimigoAtual->getHpMaximo() << "\n";
@@ -114,29 +138,48 @@ void Partida::processarCombate() {
     std::cout << "  1 - Atacar\n";
     std::cout << "  2 - Usar item\n";
     std::cout << "  3 - Ver inventario\n";
+    Guerreiro* guerreiro = dynamic_cast<Guerreiro*>(jogador.get());
+    if (guerreiro) {
+        std::cout << "  4 - Bloquear ataque\n";
+    }
     std::cout << "Opcao: ";
 
     int acao = 0;
-    std::cin >> acao;
+    if (!lerInteiro(acao)) {
+        std::cout << "Acao invalida. Tente novamente.\n";
+        return;
+    }
 
     try {
         switch (acao) {
+            case 1:
+                jogador->atacar(inimigoAtual.get());
+                break;
             case 2: {
                 jogador->listarInventario();
-                if (jogador->tamanhoInventario() > 0) {
-                    std::cout << "Qual item usar (indice)? ";
-                    int indice;
-                    std::cin >> indice;
-                    jogador->usarItem(indice);
+                if (jogador->tamanhoInventario() == 0) {
+                    return;
                 }
+
+                std::cout << "Qual item usar (indice)? ";
+                int indice = 0;
+                if (!lerInteiro(indice)) {
+                    throw AcaoInvalidaException("Acao invalida: indice de item deve ser numerico.");
+                }
+                jogador->usarItem(indice);
                 break;
             }
             case 3:
                 jogador->listarInventario();
                 return; // não consome o turno
-            default:
-                jogador->atacar(inimigoAtual.get());
+            case 4:
+                if (!guerreiro) {
+                    throw AcaoInvalidaException("Acao invalida: apenas Guerreiro pode bloquear.");
+                }
+                guerreiro->bloquearAtaque();
                 break;
+            default:
+                throw AcaoInvalidaException("Acao invalida: escolha uma opcao disponivel.");
         }
     } catch (const AcaoInvalidaException& e) {
         std::cout << "Erro: " << e.what() << "\n";
@@ -164,6 +207,22 @@ void Partida::processarCombate() {
 void Partida::processarSaqueAndar() {
     std::cout << "\nVoce encontra um bau de recompensas!\n";
 
+    Mago* mago = dynamic_cast<Mago*>(jogador.get());
+    if (mago) {
+        int manaRestaurada = 15 + jogador->getAndarAtual() * 2;
+        int manaAntes = mago->getManaAtual();
+        mago->restaurarMana(manaRestaurada);
+        int manaRecuperada = mago->getManaAtual() - manaAntes;
+
+        if (manaRecuperada > 0) {
+            std::cout << "A energia arcana retorna: +" << manaRecuperada
+                      << " mana (" << mago->getManaAtual()
+                      << "/" << mago->getManaMaxima() << ").\n";
+        } else {
+            std::cout << "Sua mana ja esta cheia.\n";
+        }
+    }
+
     int sorteio = std::rand() % 2;
     if (sorteio == 0) {
         int cura = 15 + jogador->getAndarAtual() * 2;
@@ -172,18 +231,59 @@ void Partida::processarSaqueAndar() {
         ));
         std::cout << "Voce encontrou uma Pocao de Cura (+" << cura << " HP)!\n";
     } else {
-        int bonus = 3;
+        int bonus = 10;
         jogador->adicionarItem(std::make_unique<BonusAtributo>(
             "Amuleto de Precisao", "Aumenta a chance de critico", bonus
         ));
         std::cout << "Voce encontrou um Amuleto de Precisao (+" << bonus << "% critico)!\n";
     }
 
-    jogador->avancarAndar();
-    std::cout << "Voce avanca para o andar " << jogador->getAndarAtual() << "!\n";
+    while (true) {
+        std::cout << "\nAntes de subir de andar:\n";
+        std::cout << "  1 - Usar item\n";
+        std::cout << "  2 - Ver inventario\n";
+        std::cout << "  3 - Avancar para o proximo andar\n";
+        std::cout << "Opcao: ";
 
-    mudarEstado(EstadoPartida::COMBATE);
-    instanciarProximoInimigo();
+        int acao = 0;
+        if (!lerInteiro(acao)) {
+            std::cout << "Acao invalida. Tente novamente.\n";
+            continue;
+        }
+
+        try {
+            switch (acao) {
+                case 1: {
+                    jogador->listarInventario();
+                    if (jogador->tamanhoInventario() == 0) {
+                        break;
+                    }
+
+                    std::cout << "Qual item usar (indice)? ";
+                    int indice = 0;
+                    if (!lerInteiro(indice)) {
+                        throw AcaoInvalidaException("Acao invalida: indice de item deve ser numerico.");
+                    }
+                    jogador->usarItem(indice);
+                    break;
+                }
+                case 2:
+                    jogador->listarInventario();
+                    break;
+                case 3:
+                    jogador->avancarAndar();
+                    std::cout << "Voce avanca para o andar " << jogador->getAndarAtual() << "!\n";
+
+                    mudarEstado(EstadoPartida::COMBATE);
+                    instanciarProximoInimigo();
+                    return;
+                default:
+                    throw AcaoInvalidaException("Acao invalida: escolha uma opcao disponivel.");
+            }
+        } catch (const AcaoInvalidaException& e) {
+            std::cout << "Erro: " << e.what() << "\n";
+        }
+    }
 }
 
 void Partida::iniciarLoop() {

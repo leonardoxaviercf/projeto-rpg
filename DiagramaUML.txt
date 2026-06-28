@@ -1,0 +1,141 @@
+classDiagram
+    %% CONTROLE PRINCIPAL
+    class Partida {
+        -EstadoPartida estadoAtual
+        -Personagem* jogador
+        -Inimigo* inimigoAtual
+        -GerenciadorEstatisticas gerenciadorSalves
+        +iniciarLoop()
+        +processarLobby()
+        +processarCombate()
+        -processarSaqueAndar()
+        -mudarEstado(EstadoPartida novoEstado)
+    }
+
+    %% CLASSES BASE
+    class Entidade {
+        <<abstract>>
+        #string nome
+        #int hpMaximo
+        #int hpAtual
+        +atacar(Entidade* alvo)*
+        +receberDano(int dano)*
+        +isVivo() bool
+    }
+
+    class Personagem {
+        <<abstract>>
+        #EstadoVida estadoAtual
+        #int chanceCriticoBase
+        #int andarAtual
+        #Item[] inventario
+        +atacar(Entidade* alvo)*
+        +receberDano(int dano)
+        +usarItem(int indiceItem)
+        +calcularCriticoTotal() int
+        +avancarAndar()
+    }
+
+    class Item {
+        <<abstract>>
+        #string nome
+        #string descricao
+        +aplicarEfeito(Personagem* p)*
+    }
+
+    %% PERSONAGENS E INIMIGOS
+    class Guerreiro {
+        -int escudoAtual
+        +atacar(Entidade* alvo)
+        +receberDano(int dano)
+        +bloquearAtaque()
+    }
+
+    class Mago {
+        -int manaAtual
+        -int manaMaxima
+        +atacar(Entidade* alvo)
+        +consumirMana()
+        +restaurarMana(int quantidade)
+    }
+
+    class Inimigo {
+        -int multiplicadorDificuldade
+        +atacar(Entidade* alvo)
+        +receberDano(int dano)
+    }
+
+    %% ITENS
+    class PocaoCura {
+        -int valorCura
+        +aplicarEfeito(Personagem* p)
+    }
+
+    class BonusAtributo {
+        -int aumentoCritico
+        +aplicarEfeito(Personagem* p)
+    }
+
+    %% ESTADOS
+    class EstadoPartida {
+        <<enumeration>>
+        LOBBY
+        COMBATE
+        SAQUE_ANDAR
+        GAME_OVER
+    }
+
+    class EstadoVida {
+        <<enumeration>>
+        CHEIA
+        ALTA
+        MEDIA
+        BAIXA
+        MORTO
+    }
+
+    %% EXCECOES E PERSISTENCIA
+    class AcaoInvalidaException {
+        <<exception>>
+        +what() const char*
+    }
+
+    class TransicaoEstadoException {
+        <<exception>>
+        +what() const char*
+    }
+
+    class GerenciadorEstatisticas {
+        -string caminhoArquivo
+        +salvarRun(Personagem* p, int andares)
+        +carregarEstatisticasGerais()
+    }
+
+    %% HERANCAS
+    Entidade <|-- Personagem
+    Entidade <|-- Inimigo
+    Personagem <|-- Guerreiro
+    Personagem <|-- Mago
+    Item <|-- PocaoCura
+    Item <|-- BonusAtributo
+
+    %% COMPOSICAO E USO
+    Partida "1" *-- "1" Personagem : jogador
+    Partida "1" o-- "0..1" Inimigo : inimigo atual
+    Partida "1" *-- "1" GerenciadorEstatisticas
+    Partida "1" --> "1" EstadoPartida
+    Personagem "1" --> "1" EstadoVida
+    Personagem "1" o-- "0..*" Item : inventario
+
+    Partida ..> TransicaoEstadoException
+    Partida ..> AcaoInvalidaException
+    Personagem ..> AcaoInvalidaException
+
+    %% REGRAS DE NEGOCIO PRINCIPAIS
+    note for Partida "Fluxo: LOBBY -> COMBATE -> SAQUE_ANDAR -> COMBATE ou GAME_OVER"
+    note for Partida "Acoes invalidas e ver inventario nao consomem turno"
+    note for Partida "No saque, o jogador pode usar itens antes de avancar andar"
+    note for Guerreiro "Pode bloquear para reforcar o escudo"
+    note for Mago "Recupera mana ao vencer combate"
+    note for Personagem "Critico escala por andar e tem limite maximo"
+    note for BonusAtributo "Aumenta chance de critico"
